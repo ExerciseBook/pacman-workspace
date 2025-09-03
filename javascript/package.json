@@ -1,0 +1,23 @@
+{
+  "name": "pacman-workspace",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dur": "ts-node src/dur.ts",
+    "timeline": "ts-node src/timeline.ts",
+    "overlap": "ts-node src/overlap.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.15.0",
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "echarts": "^6.0.0"
+  }
+}
