@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="height: 100%; margin: 0">
+<div id="container" style="height: 100%"></div>
+
+
+<script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<!-- Uncomment this line if you want to dataTool extension
+<script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/extension/dataTool.min.js"></script>
+-->
+<!-- Uncomment this line if you want to use gl extension
+<script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-gl/dist/echarts-gl.min.js"></script>
+-->
+<!-- Uncomment this line if you want to echarts-stat extension
+<script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-stat/dist/ecStat.min.js"></script>
+-->
+<!-- Uncomment this line if you want to echarts-graph-modularity extension
+<script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-graph-modularity/dist/echarts-graph-modularity.min.js"></script>
+-->
+<!-- Uncomment this line if you want to use map
+<script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js"></script>
+-->
+<!-- Uncomment these two lines if you want to use bmap extension
+<script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=YOUR_API_KEY"></script>
+<script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/extension/bmap.min.js"></script>
+-->
+
+<script type="text/javascript">
+    const dom = document.getElementById('container');
+    const myChart = echarts.init(dom, null, {
+        renderer: 'canvas',
+        useDirtyRect: false
+    });
+    const app = {};
+
+    let option;
+
+    function renderItem(params, api) {
+        const categoryIndex = api.value(0);
+        const start = api.coord([api.value(1), categoryIndex]);
+        const end = api.coord([api.value(2), categoryIndex]);
+        const height = api.size([0, 1])[1] * 0.6;
+        const rectShape = echarts.graphic.clipRectByRect(
+            {
+                x: start[0],
+                y: start[1] - height / 2,
+                width: end[0] - start[0],
+                height: height
+            },
+            {
+                x: params.coordSys.x,
+                y: params.coordSys.y,
+                width: params.coordSys.width,
+                height: params.coordSys.height
+            }
+        );
+        return (
+            rectShape && {
+                type: 'rect',
+                transition: ['shape'],
+                shape: rectShape,
+                style: api.style()
+            }
+        );
+    }
+
+    option = {}
+
+    if (option && typeof option === 'object') {
+        myChart.setOption(option);
+    }
+
+    window.addEventListener('resize', myChart.resize);
+</script>
+</body>
+</html>
