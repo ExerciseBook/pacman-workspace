@@ -37,9 +37,9 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
     const spanData = [] as any;
 
     data.A.forEach(item => {
-        let [st, et] = item;
+        let [st, et] = item.interval;
         spanData.push({
-            name: "计算",
+            name: item.name.join(", "),
             value: [0, st, et, (et - st)],
             itemStyle: {
                 normal: {
@@ -50,9 +50,9 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
     })
 
     data.B.forEach(item => {
-        let [st, et] = item;
+        let [st, et] = item.interval;
         spanData.push({
-            name: "通信",
+            name: item.name.join(", "),
             value: [1, st, et, (et - st)],
             itemStyle: {
                 normal: {

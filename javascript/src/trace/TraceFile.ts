@@ -80,17 +80,85 @@ function isFiniteNum(x: any): x is number {
     return typeof x === "number" && Number.isFinite(x);
 }
 
+
 export type Num = number;
 export type Interval = [Num, Num];
 
-function normalizeEvents(events: TraceEvent[]): Interval[] {
-    const ranges: Interval[] = events
-        .filter(e => isFiniteNum(e.ts) && isFiniteNum(e.dur) && (e.dur as number) > 0)
-        .map(e => [e.ts as number, (e.ts as number) + (e.dur as number)]);
+export interface NamedIntervalSegment {
+    name: string[];    // 这个时间片内活跃的事件名去重后的集合
+    interval: Interval;// [start, end)
+}
 
+// 替换原 normalizeEvents：返回带 name[] 的区段
+function normalizeEvents(events: TraceEvent[]): NamedIntervalSegment[] {
+    type Endpoint = { t: number; kind: 1 | -1; name: string };
+
+    // 1) 过滤并生成端点
+    const endpoints: Endpoint[] = [];
+    for (const e of events) {
+        if (isFiniteNum(e.ts) && isFiniteNum(e.dur) && e.dur! > 0) {
+            const s = e.ts as number;
+            const te = s + (e.dur as number);
+            endpoints.push({t: s, kind: 1, name: e.name});
+            endpoints.push({t: te, kind: -1, name: e.name});
+        }
+    }
+    if (endpoints.length === 0) return [];
+
+    // 2) 按时间排序；同一时间点：开始在前、结束在后
+    endpoints.sort((a, b) => (a.t === b.t ? b.kind - a.kind : a.t - b.t));
+
+    // 3) 扫描线
+    const active = new Map<string, number>(); // name -> 计数（同名事件可能重叠）
+    const out: NamedIntervalSegment[] = [];
+    let i = 0;
+    let prevT: number | null = null;
+
+    while (i < endpoints.length) {
+        const curT = endpoints[i]!.t;
+
+        // 在 [prevT, curT) 之间输出一个片段（若有活跃集合）
+        if (prevT !== null && curT > prevT && active.size > 0) {
+            const names = Array.from(active.keys()).sort();
+            const last = out[out.length - 1];
+            // 与上一个片段 name 集合相同则合并
+            if (
+                last &&
+                last.interval[1] === prevT &&
+                last.name.length === names.length &&
+                last.name.every((n, idx) => n === names[idx])
+            ) {
+                last.interval[1] = curT;
+            } else {
+                out.push({name: names, interval: [prevT, curT]});
+            }
+        }
+
+        // 把同一时间点的所有端点一次处理完
+        while (i < endpoints.length && endpoints[i]!.t === curT) {
+            const {kind, name} = endpoints[i]!;
+            if (kind === 1) {
+                active.set(name, (active.get(name) ?? 0) + 1);
+            } else {
+                const cnt = (active.get(name) ?? 0) - 1;
+                if (cnt <= 0) active.delete(name);
+                else active.set(name, cnt);
+            }
+            i++;
+        }
+        prevT = curT;
+    }
+
+    return out;
+}
+
+// 新增：把 NamedIntervalSegment[] 忽略名字后合并成并集区间（供 overlap 计算）
+function mergeIntervalsFromSegments(segs: NamedIntervalSegment[]): Interval[] {
+    if (segs.length === 0) return [];
+    const ranges = segs.map(s => s.interval).filter(([s, e]) => e > s);
     if (ranges.length === 0) return [];
 
-    const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+    const sorted = ranges.slice().sort((a, b) => a[0] - b[0]);
     const merged: Interval[] = [];
     let [cs, ce] = sorted[0] as Interval;
 
@@ -106,6 +174,18 @@ function normalizeEvents(events: TraceEvent[]): Interval[] {
     }
     merged.push([cs, ce]);
     return merged;
+}
+
+export interface OverlapResult {
+    A: NamedIntervalSegment[];               // 归并后的 A 区间
+    B: NamedIntervalSegment[];               // 归并后的 B 区间
+    overlapIntervals: Interval[];// A 与 B 的交集区间
+    overlapTotal: number;        // 交集总时长
+    totalSpan: number;           // 整体时间跨度（来自 trace）
+    rate: number;                // overlapTotal / totalSpan
+
+    minTs: number;
+    maxTe: number;
 }
 
 function intervalsIntersection(a: Interval[], b: Interval[]) {
@@ -124,18 +204,7 @@ function intervalsIntersection(a: Interval[], b: Interval[]) {
     return {inters, total};
 }
 
-export interface OverlapResult {
-    A: Interval[];               // 归并后的 A 区间
-    B: Interval[];               // 归并后的 B 区间
-    overlapIntervals: Interval[];// A 与 B 的交集区间
-    overlapTotal: number;        // 交集总时长
-    totalSpan: number;           // 整体时间跨度（来自 trace）
-    rate: number;                // overlapTotal / totalSpan
-
-    minTs: number;
-    maxTe: number;
-}
-
+// 修改 calculateOverlapRate 中获取 A/B 的两行，其他逻辑不变：
 export function calculateOverlapRate(
     traceFile: TraceFile,
     events1: TraceEvent[],
@@ -151,21 +220,32 @@ export function calculateOverlapRate(
     }
     const totalSpan = maxTe - minTs;
 
-    // 2) 规范化 A/B（并集归并）
-    const A = normalizeEvents(events1);
-    const B = normalizeEvents(events2);
+    // 2) 规范化 A/B（带名字的分段 => 合并成并集区间）
+    const A_segments = normalizeEvents(events1);
+    const B_segments = normalizeEvents(events2);
+    const A = mergeIntervalsFromSegments(A_segments);
+    const B = mergeIntervalsFromSegments(B_segments);
 
     // 3) 没有有效跨度或任一集合为空 → 空结果
     if (!(totalSpan > 0) || A.length === 0 || B.length === 0) {
-        return {A, B, overlapIntervals: [], overlapTotal: 0, totalSpan: Math.max(0, totalSpan), rate: 0};
+        return {
+            A: A_segments,
+            B: B_segments,
+            overlapIntervals: [],
+            overlapTotal: 0,
+            totalSpan: Math.max(0, totalSpan),
+            rate: 0,
+            minTs,
+            maxTe
+        };
     }
 
     // 4) 交集
     const {inters, total} = intervalsIntersection(A, B);
 
     return {
-        A,
-        B,
+        A: A_segments,
+        B: B_segments,
         overlapIntervals: inters,
         overlapTotal: total,
         totalSpan,
