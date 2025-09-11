@@ -1,24 +1,33 @@
 import {TraceFile, calculateOverlapRate} from './trace/TraceFile.ts'
-import {makeTraceOverlapOption} from "./trace/echart_intergration.ts";
+import {exportProfileChart, makeTraceOverlapOption} from "./trace/echart_intergration.ts";
 
-const oldTrace = '/Users/eric/Downloads/torch_prof_aibenchmark_8nodes_tp4-pp2-ep8-etp2-cp1-vp2-08291738/trace_rank4_step4.json'
-const newTrace = '/Users/eric/Downloads/torch_prof_aibenchmark_8nodes_tp4-pp2-ep8-etp2-cp1-vp2/未命名/trace_rank4_step4.json'
-const traceFile = new TraceFile(newTrace);
+const oldTrace = '/Users/eric/Documents/看看trace/没开cudagraph/trace_rank0_step4.json';
+const newTrace = '/Users/eric/Documents/看看trace/开了cudagraph/trace_rank0_step4.json';
 
-const calc = traceFile.filterEvent(
-    (item) => {
-        return item.name.includes("ijk");
-    }
-);
+function processTrace(tracePath: string, outputHtml: string) {
+    const traceFile = new TraceFile(tracePath);
 
-const comm = traceFile.filterEvent(
-    (item) => {
-        return item.name.includes("nccl");
-    }
-);
+    const calc = traceFile.filterEvent(
+        (item) => {
+            return item.name.includes("aten::");
+        }
+    );
 
-const result = calculateOverlapRate(traceFile, calc, comm)
+    const comm = traceFile.filterEvent(
+        (item) => {
+            const name = item.name;
+            return name.includes("nccl") && !name.includes("nccl_version");
+        }
+    );
 
-const option = makeTraceOverlapOption(result)
+    const result = calculateOverlapRate(traceFile, calc, comm);
+    const option = makeTraceOverlapOption(result);
 
-console.log(JSON.stringify(option).replace(/"RenderItemFN"/g, "renderItem"))
+    exportProfileChart(option, outputHtml);
+
+    console.log(result.rate);
+    console.log(result.B.reduce((acc, cnt) => acc + cnt.interval[1] - cnt.interval[0], 0) / (result.maxTe - result.minTs));
+}
+
+processTrace(oldTrace, "output/没开cudagraph.html");
+processTrace(newTrace, "output/开了cudagraph.html");

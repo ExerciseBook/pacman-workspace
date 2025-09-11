@@ -68,7 +68,7 @@
         );
     }
 
-    option = {}
+    option = <%~ it.option %>
 
     if (option && typeof option === 'object') {
         myChart.setOption(option);

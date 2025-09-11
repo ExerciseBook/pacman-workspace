@@ -18,6 +18,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "echarts": "^6.0.0"
+    "echarts": "^6.0.0",
+    "eta": "^3.5.0"
   }
 }

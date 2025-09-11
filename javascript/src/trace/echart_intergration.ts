@@ -1,6 +1,8 @@
-import type {OverlapResult} from "./TraceFile.js";
-import type {Interval} from "./types.js";
+import type {OverlapResult} from "./TraceFile.ts";
+import type {Interval} from "./types.ts";
 import * as echarts from "echarts/core";
+import {eta} from "../template/index.ts"
+import fs from "fs";
 
 function renderItem(params, api) {
     const categoryIndex = api.value(0);
@@ -129,4 +131,12 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
             }
         ]
     }
+}
+
+export function exportProfileChart(option: any, outputPath: string) {
+    const optionData = JSON.stringify(option).replace(/"RenderItemFN"/g, "renderItem");
+
+    const result = eta.render("./profile", { option: optionData });
+
+    fs.writeFileSync(outputPath, result, { encoding: "utf-8" });
 }
