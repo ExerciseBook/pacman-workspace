@@ -33,13 +33,28 @@ function renderItem(params, api) {
     );
 }
 
-export function makeTraceOverlapOption(data: OverlapResult): any {
-    const startTime = data.minTs
+export type EchartTraceOverlapOption = {
+    normalizeTime?: boolean; // 是否归一化时间轴到0开始
+}
+
+export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOverlapOption): any {
+    const normalizeTime = cfg.normalizeTime ?? true;
+
+    const startTime = normalizeTime ? 0 : data.minTs
+    const endTime = normalizeTime ? (data.maxTe - data.minTs) : data.maxTe
 
     const spanData = [] as any;
 
+    const getStEt = (interval: Interval): Interval => {
+        if (normalizeTime) {
+            return [interval[0] - data.minTs, interval[1] - data.minTs];
+        } else {
+            return interval;
+        }
+    }
+
     data.A.forEach(item => {
-        let [st, et] = item.interval;
+        let [st, et] = getStEt(item.interval);
         spanData.push({
             name: item.name.join(", "),
             value: [0, st, et, (et - st)],
@@ -52,7 +67,7 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
     })
 
     data.B.forEach(item => {
-        let [st, et] = item.interval;
+        let [st, et] = getStEt(item.interval);
         spanData.push({
             name: item.name.join(", "),
             value: [1, st, et, (et - st)],
@@ -65,7 +80,7 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
     })
 
     data.overlapIntervals.forEach(item => {
-        let [st, et] = item;
+        let [st, et] = getStEt(item);
         spanData.push({
             name: "Overlap",
             value: [2, st, et, (et - st)],
@@ -106,10 +121,11 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
         },
         xAxis: {
             min: startTime,
+            max: endTime,
             scale: true,
             axisLabel: {
                 formatter: function (val) {
-                    return Math.max(0, val - startTime) + ' ms';
+                    return Math.max(0, val - startTime) + ' us';
                 }
             }
         },
@@ -136,7 +152,7 @@ export function makeTraceOverlapOption(data: OverlapResult): any {
 export function exportProfileChart(option: any, outputPath: string) {
     const optionData = JSON.stringify(option).replace(/"RenderItemFN"/g, "renderItem");
 
-    const result = eta.render("./profile", { option: optionData });
+    const result = eta.render("./profile", {option: optionData});
 
-    fs.writeFileSync(outputPath, result, { encoding: "utf-8" });
+    fs.writeFileSync(outputPath, result, {encoding: "utf-8"});
 }

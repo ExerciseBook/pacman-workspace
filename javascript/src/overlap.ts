@@ -21,13 +21,18 @@ function processTrace(tracePath: string, outputHtml: string) {
     );
 
     const result = calculateOverlapRate(traceFile, calc, comm);
-    const option = makeTraceOverlapOption(result);
+    const option = makeTraceOverlapOption(result, {
+        normalizeTime: true,
+    });
 
     exportProfileChart(option, outputHtml);
 
-    console.log(result.rate);
-    console.log(result.B.reduce((acc, cnt) => acc + cnt.interval[1] - cnt.interval[0], 0) / (result.maxTe - result.minTs));
+    console.log("Torch Kernal 和 NCCL Kernal 的重叠率：" + result.rate);
+    console.log("Torch Kernal 和 NCCL Kernal 重叠的部分占全程多少："+ result.B.reduce((acc, cnt) => acc + cnt.interval[1] - cnt.interval[0], 0) / (result.maxTe - result.minTs));
 }
 
+console.log("没有开启 cudagraph 的情况：");
 processTrace(oldTrace, "output/没开cudagraph.html");
+console.log("====================================");
+console.log("开启 cudagraph 的情况：");
 processTrace(newTrace, "output/开了cudagraph.html");
