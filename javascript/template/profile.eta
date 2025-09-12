@@ -68,7 +68,25 @@
         );
     }
 
+    const startTime = <%~ it.startTime %>
+
     option = <%~ it.option %>
+
+    option.tooltip = {
+        formatter: function (params) {
+            // console.log(params);
+            if (params.seriesName === 'Memory Trace') {
+                return 'Memory Trace: ' + params.value[1];
+            }
+            return params.marker + params.name + ': ' + params.value[3] + ' ms';
+        }
+    }
+
+    option.xAxis.axisLabel = {
+        formatter: function (val) {
+            return Math.max(0, val - startTime) + ' us';
+        }
+    }
 
     if (option && typeof option === 'object') {
         myChart.setOption(option);

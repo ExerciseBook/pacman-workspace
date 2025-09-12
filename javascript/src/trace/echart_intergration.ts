@@ -1,4 +1,4 @@
-import type {OverlapResult} from "./TraceFile.ts";
+import type {OverlapResult, TraceEvent} from "./TraceFile.ts";
 import type {Interval} from "./types.ts";
 import * as echarts from "echarts/core";
 import {eta} from "../template/index.ts"
@@ -35,10 +35,12 @@ function renderItem(params, api) {
 
 export type EchartTraceOverlapOption = {
     normalizeTime?: boolean; // 是否归一化时间轴到0开始
+    memoryTrace?: TraceEvent[];
 }
 
 export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOverlapOption): any {
     const normalizeTime = cfg.normalizeTime ?? true;
+    const memoryTrace = cfg.memoryTrace ?? [];
 
     const startTime = normalizeTime ? 0 : data.minTs
     const endTime = normalizeTime ? (data.maxTe - data.minTs) : data.maxTe
@@ -94,10 +96,9 @@ export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOver
 
 
     return {
-        tooltip: {
-            formatter: function (params) {
-                return params.marker + params.name + ': ' + params.value[3] + ' ms';
-            }
+        config: {
+            startTime: startTime,
+            endTime: endTime,
         },
         title: {
             text: 'Profile',
@@ -123,11 +124,6 @@ export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOver
             min: startTime,
             max: endTime,
             scale: true,
-            axisLabel: {
-                formatter: function (val) {
-                    return Math.max(0, val - startTime) + ' us';
-                }
-            }
         },
         yAxis: {
             data: ["A", "B", "Overlap"]
@@ -144,6 +140,23 @@ export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOver
                     y: 0
                 },
                 data: spanData
+            },
+            {
+                type: 'line',
+                name: 'Memory Trace',
+                encode: {
+                    x: 'x',
+                    y: 'y'
+                },
+                data: memoryTrace.sort((a, b) => {
+                    return a.ts! - b.ts!;
+                }).map((it) => ([
+                    normalizeTime ? (it.ts! - data.minTs) : it.ts,
+                    it.args["Total Allocated"] / it.args["Total Reserved"]
+                ])),
+                lineStyle: {
+                    color: '#ff7f50'
+                }
             }
         ]
     }
@@ -152,7 +165,10 @@ export function makeTraceOverlapOption(data: OverlapResult, cfg: EchartTraceOver
 export function exportProfileChart(option: any, outputPath: string) {
     const optionData = JSON.stringify(option).replace(/"RenderItemFN"/g, "renderItem");
 
-    const result = eta.render("./profile", {option: optionData});
+    const result = eta.render("./profile", {
+        option: optionData,
+        ...option.config,
+    });
 
     fs.writeFileSync(outputPath, result, {encoding: "utf-8"});
 }

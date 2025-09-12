@@ -7,14 +7,23 @@ const newTrace = '/Users/eric/Documents/看看trace/开了cudagraph/trace_rank0_
 function processTrace(tracePath: string, outputHtml: string) {
     const traceFile = new TraceFile(tracePath);
 
+    const memTrace = traceFile.getMemoryMetrics();
+
     const calc = traceFile.filterEvent(
         (item) => {
-            return item.name.includes("aten::");
+            if　(item.cat != "kernel") {
+                return false;
+            }
+            const name = item.name;
+            return name.includes("ijk") || name.includes("gemm") || name.includes("conv") || name.includes("matmul");
         }
     );
 
     const comm = traceFile.filterEvent(
         (item) => {
+            if　(item.cat != "kernel") {
+                return false;
+            }
             const name = item.name;
             return name.includes("nccl") && !name.includes("nccl_version");
         }
@@ -23,12 +32,12 @@ function processTrace(tracePath: string, outputHtml: string) {
     const result = calculateOverlapRate(traceFile, calc, comm);
     const option = makeTraceOverlapOption(result, {
         normalizeTime: true,
+        memoryTrace: memTrace,
     });
 
     exportProfileChart(option, outputHtml);
 
     console.log("Torch Kernal 和 NCCL Kernal 的重叠率：" + result.rate);
-    console.log("Torch Kernal 和 NCCL Kernal 重叠的部分占全程多少："+ result.B.reduce((acc, cnt) => acc + cnt.interval[1] - cnt.interval[0], 0) / (result.maxTe - result.minTs));
 }
 
 console.log("没有开启 cudagraph 的情况：");

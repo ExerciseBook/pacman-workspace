@@ -1,7 +1,7 @@
 import fs from 'fs'
 import type {Interval} from "./types.js";
 
-interface TraceEvent {
+export interface TraceEvent {
     ph: string; // event phase, e.g., 'X'
     bp: string;
     cat: string; // category, e.g., 'cpu_op'
@@ -12,6 +12,8 @@ interface TraceEvent {
     ts?: number; // timestamp (in microseconds or nanoseconds, as provided)
     dur?: number; // duration of the event (in microseconds or nanoseconds)
     args: {
+        "Total Allocated": number; // external id, e.g., 2049
+        "Total Reserved": number; // external id, e.g., 2049
         "External id": number; // external id, e.g., 2049
         "Record function id": number; // function id, e.g., 0
         "Sequence number": number; // sequence number, e.g., 21662
@@ -21,7 +23,7 @@ interface TraceEvent {
 }
 
 
-interface AggregateResult {
+export interface AggregateResult {
     max: number;
     min: number;
     p95: number;
@@ -73,6 +75,10 @@ export class TraceFile {
     filterEvent(filter: (item: TraceEvent) => boolean): TraceEvent[] {
         return this.traceEvents.filter(filter);
     }
+
+    getMemoryMetrics() {
+        return this.traceEvents.filter(e => e.cat === 'cpu_instant_event' && e.name === '[memory]');
+    }
 }
 
 
@@ -81,15 +87,11 @@ function isFiniteNum(x: any): x is number {
 }
 
 
-export type Num = number;
-export type Interval = [Num, Num];
-
 export interface NamedIntervalSegment {
     name: string[];    // 这个时间片内活跃的事件名去重后的集合
     interval: Interval;// [start, end)
 }
 
-// 替换原 normalizeEvents：返回带 name[] 的区段
 function normalizeEvents(events: TraceEvent[]): NamedIntervalSegment[] {
     type Endpoint = { t: number; kind: 1 | -1; name: string };
 
@@ -152,7 +154,6 @@ function normalizeEvents(events: TraceEvent[]): NamedIntervalSegment[] {
     return out;
 }
 
-// 新增：把 NamedIntervalSegment[] 忽略名字后合并成并集区间（供 overlap 计算）
 function mergeIntervalsFromSegments(segs: NamedIntervalSegment[]): Interval[] {
     if (segs.length === 0) return [];
     const ranges = segs.map(s => s.interval).filter(([s, e]) => e > s);
@@ -204,7 +205,6 @@ function intervalsIntersection(a: Interval[], b: Interval[]) {
     return {inters, total};
 }
 
-// 修改 calculateOverlapRate 中获取 A/B 的两行，其他逻辑不变：
 export function calculateOverlapRate(
     traceFile: TraceFile,
     events1: TraceEvent[],
