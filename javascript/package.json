@@ -6,7 +6,8 @@
   "scripts": {
     "dur": "ts-node src/dur.ts",
     "timeline": "ts-node src/timeline.ts",
-    "overlap": "ts-node src/overlap.ts"
+    "overlap": "ts-node src/overlap.ts",
+    "multitrack": "ts-node src/multitrack.ts"
   },
   "keywords": [],
   "author": "",

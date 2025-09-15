@@ -1,5 +1,6 @@
 import fs from 'fs'
 import type {Interval} from "./types.js";
+import path from "path";
 
 export interface TraceEvent {
     ph: string; // event phase, e.g., 'X'
@@ -35,11 +36,15 @@ export interface AggregateResult {
 
 export class TraceFile {
     traceEvents: TraceEvent[];
+    path: string;
+    fileName: string;
 
     constructor(filePath: string) {
         const data = fs.readFileSync(filePath, 'utf8');
         const parsedData = JSON.parse(data);
         this.traceEvents = parsedData.traceEvents || [];
+        this.path = filePath;
+        this.fileName = path.basename(filePath);
     }
 
     private static calculatePercentile(arr: number[], percentile: number): number {
