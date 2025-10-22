@@ -10,6 +10,8 @@ interface ProcessingData {
     ncclSpan: TraceEvent[]
 }
 
+// 读取某个目录下的 trace 文件，trace 文件为 json 格式
+// 返回 ProcessingData 数组
 function readTraceFiles(dir: string): ProcessingData[] {
     const files = fs.readdirSync(dir) as string[];
     return files
@@ -25,6 +27,7 @@ function readTraceFiles(dir: string): ProcessingData[] {
         });
 }
 
+// 按照名字提取 NCCL 的 span
 function extractNcclSpan(data: ProcessingData): void {
     data.ncclSpan = data.trace.filterEvent(
         (item) => {
@@ -37,10 +40,13 @@ function extractNcclSpan(data: ProcessingData): void {
     );
 }
 
-
+// 读取 trace 文件
 const processingData = readTraceFiles(traceDir);
+
+// 提取 NCCL 的 span 出来
 processingData.forEach(data => extractNcclSpan(data));
 
+// 生成图表
 const option = makeProfileOption(processingData.map((it) => {
     return {
         trace: it.trace,
@@ -50,6 +56,7 @@ const option = makeProfileOption(processingData.map((it) => {
     normalizeTime: true,
 })
 
+// 把图表写入文件
 exportProfileChart(option, "output/multitrack.html");
 
 console.log("done")
