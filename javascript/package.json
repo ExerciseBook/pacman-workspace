@@ -4,6 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "commheat": "ts-node src/commheat.ts",
+    "comm": "ts-node src/comm.ts",
     "dur": "ts-node src/dur.ts",
     "timeline": "ts-node src/timeline.ts",
     "overlap": "ts-node src/overlap.ts",

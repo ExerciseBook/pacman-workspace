@@ -20,6 +20,16 @@ export interface TraceEvent {
         "Sequence number": number; // sequence number, e.g., 21662
         "Fwd thread id": number; // forward thread id, e.g., 1
         "Ev Idx": number; // event index, e.g., 0
+
+        "Process Group Description": string; // name == record_param_comms
+        "dtype": string;
+        "In msg nelems": number;
+        "Out msg nelems": number;
+        "Process Group Ranks": number[];
+        "Group size": number;
+        "Process Group Name": string;
+        "Collective name": string;
+        "Rank": number;
     };
 }
 
