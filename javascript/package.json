@@ -9,7 +9,8 @@
     "dur": "ts-node src/dur.ts",
     "timeline": "ts-node src/timeline.ts",
     "overlap": "ts-node src/overlap.ts",
-    "multitrack": "ts-node src/multitrack.ts"
+    "multitrack": "ts-node src/multitrack.ts",
+    "pipeline_render": "ts-node src/pipeline_render.ts"
   },
   "keywords": [],
   "author": "",
