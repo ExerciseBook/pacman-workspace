@@ -20,16 +20,50 @@ function getStack(event: TraceEvent): any {
     return traceFile.getParent(marker)
 }
 
+// 将栈序列转换为字符串作为分组键
+function stackToKey(stack: any[]): string {
+    return stack.map(s => s.name).join('\n');
+}
+
 const result = traceFile.filterEvent(
     (item) => {
         return item.name == "nccl:all_to_all" && item.cat == 'gpu_user_annotation'
     }
 );
 
-// for (let item of result) {
-//     const s = getStack(item);
-// }
+// 按栈分组
+const groupedByStack = new Map<string, TraceEvent[]>();
 
-console.log(getStack(result[5]).map(s => s.name))
+result.forEach((event) => {
+    try {
+        const stack = getStack(event);
+        const key = stackToKey(stack);
 
-// console.log(result);
+        if (!groupedByStack.has(key)) {
+            groupedByStack.set(key, []);
+        }
+        groupedByStack.get(key)!.push(event);
+    } catch (error) {
+        console.error(`Error processing event:`, error);
+    }
+});
+
+// 输出分组结果
+console.log(`Total events: ${result.length}`);
+console.log(`Total unique stacks: ${groupedByStack.size}`);
+console.log('');
+
+let categoryIndex = 0;
+for (const [stackKey, events] of groupedByStack.entries()) {
+    console.log(`[类型编号${categoryIndex}] ${stackKey}`);
+    console.log(`Count: ${events.length} events`);
+    console.log('Events:', events.map(e => ({
+        name: e.name,
+        ts: e.ts,
+        dur: e.dur,
+        tid: e.tid
+    })));
+    console.log('');
+    categoryIndex++;
+}
+
