@@ -13,37 +13,11 @@ function getStack(event: TraceEvent): any {
 
     const marker = markers[0]!;
 
-    // console.log(s)
-
     if (!marker.ts) {
         throw new Error(`Marker event does not have a timestamp`);
     }
 
-    const result = traceFile.filterEvent(s => {
-        if (s.tid != marker.tid) {
-            return false
-        }
-
-        if (!s.ts) {
-            return false
-        }
-
-        if (s.ts > marker.ts!) {
-            return false
-        }
-
-        if (!s.dur) {
-            return false // 存疑
-        }
-
-        if (s.ts + s.dur < marker.ts!) {
-            return false
-        }
-
-        return true
-    }).sort((a, b) => a.ts! - b.ts!)
-
-    return result
+    return traceFile.getParent(marker)
 }
 
 const result = traceFile.filterEvent(
@@ -56,6 +30,6 @@ const result = traceFile.filterEvent(
 //     const s = getStack(item);
 // }
 
-console.log(getStack(result[0]).map(s => s.name))
+console.log(getStack(result[5]).map(s => s.name))
 
 // console.log(result);

@@ -94,6 +94,32 @@ export class TraceFile {
     getMemoryMetrics() {
         return this.traceEvents.filter(e => e.cat === 'cpu_instant_event' && e.name === '[memory]');
     }
+
+    getParent(marker: TraceEvent) {
+        return this.filterEvent(s => {
+            if (s.tid != marker.tid) {
+                return false
+            }
+
+            if (!s.ts) {
+                return false
+            }
+
+            if (s.ts > marker.ts!) {
+                return false
+            }
+
+            if (!s.dur) {
+                return false // 存疑
+            }
+
+            if (s.ts + s.dur < marker.ts!) {
+                return false
+            }
+
+            return true
+        }).sort((a, b) => a.ts! - b.ts!)
+    }
 }
 
 
