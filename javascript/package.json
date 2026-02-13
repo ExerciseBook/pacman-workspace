@@ -10,7 +10,8 @@
     "timeline": "ts-node src/timeline.ts",
     "overlap": "ts-node src/overlap.ts",
     "multitrack": "ts-node src/multitrack.ts",
-    "pipeline_render": "ts-node src/pipeline_render.ts"
+    "pipeline_render": "ts-node src/pipeline_render.ts",
+    "all_to_all_category": "ts-node src/all_to_all_category.ts"
   },
   "keywords": [],
   "author": "",
