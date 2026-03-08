@@ -7,7 +7,7 @@ export interface TraceEvent {
     bp: string;
     cat: string; // category, e.g., 'cpu_op'
     name: string; // event name, e.g., 'autograd::engine::evaluate_function: MulBackward0'
-    id: number; //
+    id: number | string; //
     pid: number; // process id
     tid: number; // thread id
     ts?: number; // timestamp (in microseconds or nanoseconds, as provided)
@@ -44,17 +44,67 @@ export interface AggregateResult {
     p5: number;
 }
 
-export class TraceFile {
+export interface PytorchTrace {
     traceEvents: TraceEvent[];
+
+    [key: string]: any;
+}
+
+export class TraceFile {
+    private readonly dataStore: PytorchTrace;
     path: string;
     fileName: string;
 
-    constructor(filePath: string) {
-        const data = fs.readFileSync(filePath, 'utf8');
-        const parsedData = JSON.parse(data);
-        this.traceEvents = parsedData.traceEvents || [];
-        this.path = filePath;
-        this.fileName = path.basename(filePath);
+    constructor(filePath?: string) {
+        if (filePath) {
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            this.dataStore = JSON.parse(fileContent);
+            this.path = filePath;
+            this.fileName = path.basename(filePath);
+
+
+            this.dataStore.traceEvents.map(s => {
+                s.id = crypto.randomUUID()
+            })
+        } else {
+            this.dataStore = {traceEvents: []};
+            this.path = '';
+            this.fileName = '';
+        }
+    }
+
+    get traceEvents(): TraceEvent[] {
+        return this.dataStore.traceEvents || [];
+    }
+
+    emptyEventFile(): TraceFile {
+        const ret = new TraceFile()
+
+        for (let key of Object.keys(this.dataStore)) {
+            if (key === 'traceEvents') {
+                ret.dataStore[key] = [];
+            } else {
+                ret.dataStore[key] = this.dataStore[key];
+            }
+        }
+
+        return ret;
+    }
+
+    addTraceEvent(traceEvent: TraceEvent, ignoreExists: boolean = false): void {
+        const exists = (traceEvent.id) ? (typeof this.dataStore.traceEvents.find(s => s.id == traceEvent.id) != "undefined") : (this.dataStore.traceEvents.indexOf(traceEvent) !== -1);
+        if (exists) {
+            if (ignoreExists) {
+                return
+            } else {
+                throw new Error(`Trace event with id ${traceEvent.id} already exists in the trace file.`);
+            }
+        }
+        this.dataStore.traceEvents.push(traceEvent);
+    }
+
+    save(path: string): void {
+        fs.writeFileSync(path, JSON.stringify(this.dataStore, null, 2), 'utf8');
     }
 
     private static calculatePercentile(arr: number[], percentile: number): number {
