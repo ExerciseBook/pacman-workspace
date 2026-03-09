@@ -174,6 +174,10 @@ export class TraceFile {
     }
 }
 
+export function duplicate(event: TraceEvent): TraceEvent {
+    return JSON.parse(JSON.stringify(event));
+}
+
 
 function isFiniteNum(x: any): x is number {
     return typeof x === "number" && Number.isFinite(x);
