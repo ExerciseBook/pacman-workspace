@@ -30,6 +30,8 @@ export interface TraceEvent {
         "Process Group Name": string;
         "Collective name": string;
         "Rank": number;
+
+        [key: string]: any;
     };
 }
 
