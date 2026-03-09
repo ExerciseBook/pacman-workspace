@@ -1,4 +1,4 @@
-import {TraceFile, TraceEvent, duplicate} from './trace/TraceFile.ts';
+import {TraceFile, type TraceEvent, duplicate} from './trace/TraceFile.ts';
 import fs from 'fs';
 
 function getAnnotations(

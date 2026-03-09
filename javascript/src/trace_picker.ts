@@ -9,7 +9,7 @@ const outputFile = traceFile.emptyEventFile()
 const allowedTid = [0, 8, 16, 24]
 
 
-function filter(event: TraceEvent): boolean | TraceEvent {
+function filter(event: TraceEvent): false | TraceEvent {
     const cat = event.cat
     if (cat !== 'gpu_user_annotation') {
         return false
