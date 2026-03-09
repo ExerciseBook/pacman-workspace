@@ -4,8 +4,8 @@ import {exportProfileChart, makeTraceOverlapOption} from "./trace/echart_intergr
 const oldTrace = '/Users/eric/Downloads/trace_rank64_step4.json';
 const newTrace = '/Users/eric/Downloads/torch_prof_aibenchmark_16nodes_tp2_pp2_ep32_etp2_vp1-2025-10-16-1424/trace_rank64_step4.json';
 
-function processTrace(tracePath: string, outputHtml: string) {
-    const traceFile = new TraceFile(tracePath);
+async function processTrace(tracePath: string, outputHtml: string) {
+    const traceFile = await TraceFile.load(tracePath);
 
     const memTrace = traceFile.getMemoryMetrics();
 
@@ -43,12 +43,14 @@ function processTrace(tracePath: string, outputHtml: string) {
     });
 
     exportProfileChart(option, outputHtml);
-
-    console.log("Torch Kernal 和 NCCL Kernal 的重叠率：" + result.rate);
 }
 
-console.log("旧的：");
-processTrace(oldTrace, "output/旧的.html");
-console.log("====================================");
-console.log("新的：");
-processTrace(newTrace, "output/新的.html");
+await processTrace(oldTrace, "output/旧的.html");
+await processTrace(newTrace, "output/新的.html");
+
+const trace = await TraceFile.load(oldTrace);
+const trace2 = await TraceFile.load(newTrace);
+
+const result = calculateOverlapRate(trace, trace.traceEvents, trace2.traceEvents);
+
+console.log("Torch Kernal 和 NCCL Kernal 的重叠率：" + result.rate);

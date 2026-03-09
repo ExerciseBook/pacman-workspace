@@ -39,7 +39,7 @@ function stripName(s: string): string {
     return s.substring(9).trim();
 }
 
-function main() {
+async function main() {
     const args = process.argv.slice(2);
 
     let start = 0;
@@ -69,7 +69,7 @@ function main() {
             continue;
         }
 
-        const runTrace = new TraceFile(filePath);
+        const runTrace = await TraceFile.load(filePath);
         const events = getAnnotations(runTrace.traceEvents, rank, stripName);
 
         if (mergedTraceData === null) {

@@ -1,7 +1,7 @@
 import {TraceFile} from './trace/TraceFile.ts'
 
 const trace = 'I:\\trace_rank0_step4.json'
-const traceFile = new TraceFile(trace);
+const traceFile = await TraceFile.load(trace);
 
 const result = traceFile.filterEvent(
     (item) => {

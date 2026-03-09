@@ -1,6 +1,8 @@
 import fs from 'fs'
 import type {Interval} from "./types.js";
 import path from "path";
+// @ts-ignore
+import bigJson from 'big-json';
 
 export interface TraceEvent {
     ph: string; // event phase, e.g., 'X'
@@ -53,21 +55,15 @@ export interface PytorchTrace {
 }
 
 export class TraceFile {
-    private readonly dataStore: PytorchTrace;
+    private dataStore: PytorchTrace;
     path: string;
     fileName: string;
 
-    constructor(filePath?: string) {
-        if (filePath) {
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            this.dataStore = JSON.parse(fileContent);
-            this.path = filePath;
-            this.fileName = path.basename(filePath);
-
-
-            this.dataStore.traceEvents.map(s => {
-                s.id = crypto.randomUUID()
-            })
+    constructor(dataStore?: PytorchTrace, filePath?: string) {
+        if (dataStore) {
+            this.dataStore = dataStore;
+            this.path = filePath || '';
+            this.fileName = filePath ? path.basename(filePath) : '';
         } else {
             this.dataStore = {traceEvents: []};
             this.path = '';
@@ -75,12 +71,33 @@ export class TraceFile {
         }
     }
 
+    static async load(filePath: string): Promise<TraceFile> {
+        return new Promise((resolve, reject) => {
+            const readStream = fs.createReadStream(filePath);
+            const parseStream = bigJson.createParseStream();
+
+            parseStream.on('data', function (pojo: any) {
+                const trace = pojo as PytorchTrace;
+                trace.traceEvents.forEach(s => {
+                    s.id = crypto.randomUUID()
+                });
+                const traceFile = new TraceFile(trace, filePath);
+                resolve(traceFile);
+            });
+
+            parseStream.on('error', reject);
+            readStream.on('error', reject);
+
+            readStream.pipe(parseStream);
+        });
+    }
+
     get traceEvents(): TraceEvent[] {
         return this.dataStore.traceEvents || [];
     }
 
     emptyEventFile(): TraceFile {
-        const ret = new TraceFile()
+        const ret = new TraceFile();
 
         for (let key of Object.keys(this.dataStore)) {
             if (key === 'traceEvents') {

@@ -145,7 +145,8 @@ for (let rank = 0; rank < 128; rank++) {
         console.warn(`Trace file for rank ${rank} does not exist: ${trace}`);
         continue;
     }
-    const traceFile = new TraceFile(trace);
+    const traceFile = await TraceFile.load(trace);
+
     const t = extractCommEvents(traceFile);
     fs.writeFileSync(`output/comm1/comm_rank${rank}_step4.json`, JSON.stringify(t, null, 4), {encoding: "utf-8"});
     console.log("Extracted comm events for rank ", rank);

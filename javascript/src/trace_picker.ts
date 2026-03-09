@@ -3,7 +3,7 @@ import { type TraceEvent, TraceFile } from './trace/TraceFile.ts'
 const inpoutTrace = '/public/home/zongzan/lhr/ddlbench/out.json'
 const outputTrace = '/public/home/zongzan/lhr/ddlbench/pipelinetrace.json'
 
-const traceFile = new TraceFile(inpoutTrace)
+const traceFile = await TraceFile.load(inpoutTrace)
 const outputFile = traceFile.emptyEventFile()
 
 const allowedTid = [0, 8, 16, 24]

@@ -12,19 +12,20 @@ interface ProcessingData {
 
 // 读取某个目录下的 trace 文件，trace 文件为 json 格式
 // 返回 ProcessingData 数组
-function readTraceFiles(dir: string): ProcessingData[] {
+async function readTraceFiles(dir: string): Promise<ProcessingData[]> {
     const files = fs.readdirSync(dir) as string[];
-    return files
+    const promises = files
         .filter(file => (
             (file.includes('trace') || file.includes('track')) &&
             file.endsWith('.json')
         ))
-        .map(file => {
+        .map(async file => {
             return {
-                trace: new TraceFile(path.join(dir, file)),
+                trace: await TraceFile.load(path.join(dir, file)),
                 ncclSpan: []
             }
         });
+    return Promise.all(promises);
 }
 
 // 按照名字提取 NCCL 的 span
@@ -41,7 +42,7 @@ function extractNcclSpan(data: ProcessingData): void {
 }
 
 // 读取 trace 文件
-const processingData = readTraceFiles(traceDir);
+const processingData = await readTraceFiles(traceDir);
 
 // 提取 NCCL 的 span 出来
 processingData.forEach(data => extractNcclSpan(data));

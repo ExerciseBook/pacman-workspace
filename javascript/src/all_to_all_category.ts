@@ -1,7 +1,7 @@
 import {type TraceEvent, TraceFile} from './trace/TraceFile.ts'
 
 const trace = 'C:\\Users\\mo\\work\\pacman-workspace\\javascript\\data\\ep\\ep8\\torch_prof_aibenchmark_tp2_pp1_ep8_etp1_vp\\trace_rank0_step11.json'
-const traceFile = new TraceFile(trace);
+const traceFile = await TraceFile.load(trace);
 
 function getStack(event: TraceEvent): {stack: TraceEvent[], kernels: TraceEvent[]} {
     const externalId = event.args["External id"]

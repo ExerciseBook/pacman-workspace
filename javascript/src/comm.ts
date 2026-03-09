@@ -2,7 +2,7 @@ import {TraceFile} from './trace/TraceFile.ts'
 import fs from "fs";
 
 const trace = 'I:\\trace\\torch_prof_aibenchmark_16nodes_tp2_pp2_ep32_etp2_vp1-2025-11-03-1442\\trace_rank0_step4.json'
-const traceFile = new TraceFile(trace);
+const traceFile = await TraceFile.load(trace);
 
 const result = traceFile.filterEvent(
     (item) => {
