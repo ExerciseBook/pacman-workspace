@@ -1,10 +1,10 @@
-import {TraceFile, type TraceEvent, duplicate} from './trace/TraceFile.ts';
+import { time } from 'console';
+import { TraceFile, type TraceEvent, duplicate } from './trace/TraceFile.ts';
 import fs from 'fs';
 
 function getAnnotations(
     events: TraceEvent[],
     overridePid: number,
-    rename?: (name: string) => string
 ): TraceEvent[] {
     const ret: TraceEvent[] = [];
     for (const e of events) {
@@ -13,8 +13,8 @@ function getAnnotations(
         if (e.name.startsWith("XXXXXXXX:") || e.name.startsWith("nccl:")) {
             const v = duplicate(e);
 
-            if (rename) {
-                v.name = rename(v.name);
+            if (e.name.startsWith("XXXXXXXX:")) {
+                v.name = v.name.substring(9).trim();
             }
 
             const overrideTid = ((cat) => {
@@ -33,10 +33,6 @@ function getAnnotations(
         }
     }
     return ret;
-}
-
-function stripName(s: string): string {
-    return s.substring(9).trim();
 }
 
 async function main() {
@@ -65,12 +61,14 @@ async function main() {
     for (let rank = start; rank < end; rank += step) {
         let filePath = pathPrefix + `/trace_rank${rank}_step4.json`;
 
+        console.log(`${new Date()}: now processing ${filePath}`)
+
         if (!fs.existsSync(filePath)) {
             continue;
         }
 
-        const runTrace = await TraceFile.load(filePath);
-        const events = getAnnotations(runTrace.traceEvents, rank, stripName);
+        const runTrace = await TraceFile.load(filePath, { idCheck: false });
+        const events = getAnnotations(runTrace.traceEvents, rank);
 
         if (mergedTraceData === null) {
             // Use this as template even if no events matched, to capture metadata
@@ -80,24 +78,19 @@ async function main() {
 
         if (mergedTraceData) {
             events.forEach(e => {
-                // duplicate(e) keeps the ID. TraceFile.addTraceEvent defaults to checking ID unless ignoreExists=true.
-                // Since these come from different files/runs, IDs *should* be unique (UUIDs on load).
-                // But just in case, we pass true to ignore checks or we can reset ID if they conflict.
-                // However, python script works on list append so no checks.
-                // Let's use ignoreExists=true for performance and safety against logic errors.
-                mergedTraceData!.addTraceEvent(e, true);
+                mergedTraceData!.addTraceEventNoCheck(e);
             });
             totalEvents += events.length;
-            console.log(`Imported ${events.length} events from ${filePath}`);
+            console.log(`${new Date()}: Imported ${events.length} events from ${filePath}`);
         }
     }
 
     if (mergedTraceData) {
         const outPath = "output/out.json";
         mergedTraceData.save(outPath);
-        console.log(`Generated merged trace ./output/out.json with ${totalEvents} events`);
+        console.log(`${new Date()}: Generated merged trace ./output/out.json with ${totalEvents} events`);
     } else {
-        console.log("No traces found or merged.");
+        console.log("${new Date()}: No traces found or merged.");
     }
 }
 

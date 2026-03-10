@@ -1,5 +1,5 @@
 import fs from 'fs'
-import type {Interval} from "./types.js";
+import type { Interval } from "./types.js";
 import path from "path";
 // @ts-ignore
 import bigJson from 'big-json';
@@ -65,22 +65,26 @@ export class TraceFile {
             this.path = filePath || '';
             this.fileName = filePath ? path.basename(filePath) : '';
         } else {
-            this.dataStore = {traceEvents: []};
+            this.dataStore = { traceEvents: [] };
             this.path = '';
             this.fileName = '';
         }
     }
 
-    static async load(filePath: string): Promise<TraceFile> {
+    static async load(filePath: string, opt?: { idCheck: boolean | undefined }): Promise<TraceFile> {
+        const idCheck = typeof opt?.idCheck === 'undefined' ? true : opt.idCheck
+
         return new Promise((resolve, reject) => {
             const readStream = fs.createReadStream(filePath);
             const parseStream = bigJson.createParseStream();
 
             parseStream.on('data', function (pojo: any) {
                 const trace = pojo as PytorchTrace;
-                trace.traceEvents.forEach(s => {
-                    s.id = crypto.randomUUID()
-                });
+                if (idCheck) {
+                    trace.traceEvents.forEach(s => {
+                        s.id = crypto.randomUUID()
+                    });
+                }
                 const traceFile = new TraceFile(trace, filePath);
                 resolve(traceFile);
             });
@@ -110,6 +114,10 @@ export class TraceFile {
         return ret;
     }
 
+    addTraceEventNoCheck(traceEvent: TraceEvent): void {
+        this.dataStore.traceEvents.push(traceEvent);
+    }
+
     addTraceEvent(traceEvent: TraceEvent, ignoreExists: boolean = false): void {
         const exists = (traceEvent.id) ? (typeof this.dataStore.traceEvents.find(s => s.id == traceEvent.id) != "undefined") : (this.dataStore.traceEvents.indexOf(traceEvent) !== -1);
         if (exists) {
@@ -132,7 +140,7 @@ export class TraceFile {
         return sortedArr[index] as number;
     }
 
-    eventsAggregate({filter}: { filter: (item: TraceEvent) => boolean }): AggregateResult | null {
+    eventsAggregate({ filter }: { filter: (item: TraceEvent) => boolean }): AggregateResult | null {
         const filteredEvents = this.traceEvents.filter((item) => {
             if (!isFiniteNum(item.dur)) {
                 return false;
@@ -153,7 +161,7 @@ export class TraceFile {
         const p10 = TraceFile.calculatePercentile(durations, 10);
         const p5 = TraceFile.calculatePercentile(durations, 5);
 
-        return {max, min, p95, p90, p50, p10, p5};
+        return { max, min, p95, p90, p50, p10, p5 };
     }
 
     filterEvent(filter: (item: TraceEvent) => boolean): TraceEvent[] {
@@ -215,8 +223,8 @@ function normalizeEvents(events: TraceEvent[]): NamedIntervalSegment[] {
         if (isFiniteNum(e.ts) && isFiniteNum(e.dur) && e.dur! > 0) {
             const s = e.ts as number;
             const te = s + (e.dur as number);
-            endpoints.push({t: s, kind: 1, name: e.name});
-            endpoints.push({t: te, kind: -1, name: e.name});
+            endpoints.push({ t: s, kind: 1, name: e.name });
+            endpoints.push({ t: te, kind: -1, name: e.name });
         }
     }
     if (endpoints.length === 0) return [];
@@ -246,13 +254,13 @@ function normalizeEvents(events: TraceEvent[]): NamedIntervalSegment[] {
             ) {
                 last.interval[1] = curT;
             } else {
-                out.push({name: names, interval: [prevT, curT]});
+                out.push({ name: names, interval: [prevT, curT] });
             }
         }
 
         // 把同一时间点的所有端点一次处理完
         while (i < endpoints.length && endpoints[i]!.t === curT) {
-            const {kind, name} = endpoints[i]!;
+            const { kind, name } = endpoints[i]!;
             if (kind === 1) {
                 active.set(name, (active.get(name) ?? 0) + 1);
             } else {
@@ -316,7 +324,7 @@ function intervalsIntersection(a: Interval[], b: Interval[]) {
         if (ae <= be) i++; else j++;
     }
     const total = inters.reduce((acc, [s, e]) => acc + (e - s), 0);
-    return {inters, total};
+    return { inters, total };
 }
 
 export function calculateOverlapRate(
@@ -355,7 +363,7 @@ export function calculateOverlapRate(
     }
 
     // 4) 交集
-    const {inters, total} = intervalsIntersection(A, B);
+    const { inters, total } = intervalsIntersection(A, B);
 
     return {
         A: A_segments,
