@@ -1,4 +1,3 @@
-import { time } from 'console';
 import { TraceFile, type TraceEvent, duplicate } from './trace/TraceFile.ts';
 import fs from 'fs';
 
@@ -12,10 +11,6 @@ function getAnnotations(
 
         if (e.name.startsWith("XXXXXXXX:") || e.name.startsWith("nccl:")) {
             const v = duplicate(e);
-
-            if (e.name.startsWith("XXXXXXXX:")) {
-                v.name = v.name.substring(9).trim();
-            }
 
             const overrideTid = ((cat) => {
                 if (cat === "gpu_user_annotation") {
