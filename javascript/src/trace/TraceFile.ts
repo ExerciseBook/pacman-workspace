@@ -130,8 +130,19 @@ export class TraceFile {
         this.dataStore.traceEvents.push(traceEvent);
     }
 
-    save(path: string): void {
-        fs.writeFileSync(path, JSON.stringify(this.dataStore, null, 2), 'utf8');
+    async save(path: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const stringifyStream = bigJson.createStringifyStream({
+                body: this.dataStore
+            });
+            const writeStream = fs.createWriteStream(path);
+
+            writeStream.on('finish', resolve);
+            writeStream.on('error', reject);
+            stringifyStream.on('error', reject);
+
+            stringifyStream.pipe(writeStream);
+        });
     }
 
     private static calculatePercentile(arr: number[], percentile: number): number {

@@ -53,7 +53,7 @@ result.forEach((event) => {
     }
 })
 
-newTrace.save('C:\\Users\\mo\\work\\pacman-workspace\\javascript\\output\\test.json')
+await newTrace.save('C:\\Users\\mo\\work\\pacman-workspace\\javascript\\output\\test.json')
 
 // // 按栈分组
 // const groupedByStack = new Map<string, TraceEvent[]>();

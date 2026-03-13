@@ -1,8 +1,4 @@
-import fs from 'fs';
-import readline from 'readline';
-import { duplicate, TraceFile, type TraceEvent } from './trace/TraceFile.ts';
-import type { ProfilerTrace } from './trace/types.ts';
-import { makeProfileOption, exportProfileChart } from './trace/echart_intergration.ts';
+import { TraceFile } from './trace/TraceFile.ts';
 
 const filePath = "output/out.json"
 const outputPath = "output/pipeline.json"
@@ -33,7 +29,7 @@ async function main() {
         }
     })
 
-    newTrace.save(outputPath)
+    await newTrace.save(outputPath)
 }
 
 main();

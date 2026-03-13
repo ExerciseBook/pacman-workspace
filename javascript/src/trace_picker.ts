@@ -54,4 +54,4 @@ traceFile.traceEvents.forEach(event => {
 console.log(`Total events: ${outputFile.traceEvents.length}`);
 console.log('');
 
-outputFile.save(outputTrace)
+await outputFile.save(outputTrace)
