@@ -5,35 +5,85 @@ function pickTrace(
     events: TraceEvent[],
     overridePid: number,
 ): TraceEvent[] {
+    function accept(e: TraceEvent): boolean {
+        if (!e.dur) {
+            return false
+        }
+
+        const name = e.name
+
+        if (!name) {
+            return false
+        }
+
+        if (name == 'ac2g') {
+            return false
+        }
+
+        if (name.startsWith("XXXXXXXX:")) {
+            return true
+        }
+
+        if (e.name.startsWith("nccl:")) {
+            return true
+        }
+
+        if (e.name.includes("ijk")) {
+            return true
+        }
+
+        if (e.name.includes("unary_kernel")) {
+            return true
+        }
+
+        return false
+    }
+
     const ret: TraceEvent[] = [];
     for (const e of events) {
-        if (!e.name) continue;
-
-        if (e.name.startsWith("XXXXXXXX:") || e.name.startsWith("nccl:")) {
-            const v = duplicate(e);
-
-            const overrideTid = ((e) => {
-                if (e.args?.["dcu.additional_span"] == "true") {
-                    return 3;
-                }
-
-                const cat = e.cat || "";
-                if (cat === "gpu_user_annotation") {
-                    return 1;
-                }
-                if (cat === "user_annotation") {
-                    return 0;
-                }
-                return 3;
-            })(e);
-
-            v.args["dcu.original_pid"] = v.pid;
-            v.args["dcu.original_tid"] = v.tid;
-
-            v.pid = overridePid;
-            v.tid = overrideTid;
-            ret.push(v);
+        if (!accept(e)) {
+            continue
         }
+        const v = duplicate(e);
+
+        const phase = v.args?.["dcu.phase"] || "";
+
+        const overrideTid = ((e) => {
+            // if (e.args?.["dcu.additional_span"] == "true") {
+            //     return 3;
+            // }
+
+            const cat = e.cat || "";
+            if (cat === "user_annotation") {
+                return 0
+            }
+
+            if (phase == "forward") {
+                return 1
+            }
+
+            if (phase == "backward") {
+                return 2
+            }
+
+            if (cat === "gpu_user_annotation") {
+                return 3
+            }
+
+            return 4
+        })(e);
+
+        if (!(v.args)) {
+            console.error(`Event with name ${v.name} has no args, but args are expected for trace analysis. Skipping this event. Event details: ${JSON.stringify(v)}`);
+            v.args = {} as any;
+        }
+
+        v.args["dcu.original_pid"] = v.pid;
+        v.args["dcu.original_tid"] = v.tid;
+
+        v.pid = overridePid;
+        v.tid = overrideTid;
+        ret.push(v);
     }
     return ret;
 }
