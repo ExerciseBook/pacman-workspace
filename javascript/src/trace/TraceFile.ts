@@ -132,16 +132,56 @@ export class TraceFile {
 
     async save(path: string): Promise<void> {
         return new Promise((resolve, reject) => {
-            const stringifyStream = bigJson.createStringifyStream({
-                body: this.dataStore
-            });
-            const writeStream = fs.createWriteStream(path);
+            const writeStream = fs.createWriteStream(path, { encoding: 'utf8' });
 
-            writeStream.on('finish', resolve);
             writeStream.on('error', reject);
-            stringifyStream.on('error', reject);
+            writeStream.on('finish', resolve);
 
-            stringifyStream.pipe(writeStream);
+            try {
+                const data = this.dataStore;
+                writeStream.write('{\n');
+
+                const keys = Object.keys(data).filter(k => k !== 'traceEvents');
+                keys.forEach(key => {
+                    writeStream.write(`  ${JSON.stringify(key)}: ${JSON.stringify(data[key])},\n`);
+                });
+
+                writeStream.write('  "traceEvents": [\n');
+
+                const events = data.traceEvents || [];
+                let i = 0;
+                const total = events.length;
+                const BATCH_SIZE = 100;
+
+                const write = () => {
+                    let ok = true;
+                    while (i < total && ok) {
+                        let chunk = '';
+                        let count = 0;
+                        while (count < BATCH_SIZE && i < total) {
+                            const event = events[i];
+                            const suffix = (i === total - 1) ? '' : ',';
+                            chunk += `    ${JSON.stringify(event)}${suffix}\n`;
+                            i++;
+                            count++;
+                        }
+                        if (chunk) {
+                            ok = writeStream.write(chunk);
+                        }
+                    }
+
+                    if (i < total) {
+                        writeStream.once('drain', write);
+                    } else {
+                        writeStream.write('  ]\n}\n');
+                        writeStream.end();
+                    }
+                };
+                write();
+            } catch (err) {
+                writeStream.end();
+                reject(err);
+            }
         });
     }
 
